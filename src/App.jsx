@@ -395,93 +395,95 @@ function App() {
       <TabNav activeTab={activeTab} setActiveTab={setActiveTab} t={t} onOpenReport={openReportModal} />
 
       {/* ════════════════ PRINT-ONLY: Premium Report Layout ═══════════════ */}
-      <div className="print-only">
-        <div className="report-page">
-          {/* Report header with logo */}
-          <div className="report-header-premium">
-            <div className="report-logo-section">
-              <img src="logo.svg" alt="MiMola" className="report-logo-img" />
-            </div>
-            <div className="report-header-divider"></div>
-            <div className="report-meta">
-              <div className="report-meta-label">FINANCIAL REPORT</div>
-              <div className="report-meta-period">{printPeriod}</div>
-              <div className="report-meta-date">Generated: {new Date().toLocaleDateString()}</div>
-            </div>
-          </div>
-
-          {/* Summary cards row */}
-          <div className="report-summary-row">
-            <div className="report-summary-card">
-              <div className="report-summary-label">TOTAL INCOME</div>
-              <div className="report-summary-value report-income">
-                {printIncome.toLocaleString(undefined, { minimumFractionDigits: 2 })} MZN
+      {reportData && (
+        <div className="print-only">
+          <div className="report-page">
+            {/* Report header with logo */}
+            <div className="report-header-premium">
+              <div className="report-logo-section">
+                <img src="logo.svg" alt="MiMola" className="report-logo-img" />
+              </div>
+              <div className="report-header-divider"></div>
+              <div className="report-meta">
+                <div className="report-meta-label">FINANCIAL REPORT</div>
+                <div className="report-meta-period">{printPeriod}</div>
+                <div className="report-meta-date">Generated: {new Date().toLocaleDateString()}</div>
               </div>
             </div>
-            <div className="report-summary-card">
-              <div className="report-summary-label">TOTAL EXPENSES</div>
-              <div className="report-summary-value report-expense">
-                {printExpenses.toLocaleString(undefined, { minimumFractionDigits: 2 })} MZN
+
+            {/* Summary cards row */}
+            <div className="report-summary-row">
+              <div className="report-summary-card">
+                <div className="report-summary-label">TOTAL INCOME</div>
+                <div className="report-summary-value report-income">
+                  {printIncome.toLocaleString(undefined, { minimumFractionDigits: 2 })} MZN
+                </div>
+              </div>
+              <div className="report-summary-card">
+                <div className="report-summary-label">TOTAL EXPENSES</div>
+                <div className="report-summary-value report-expense">
+                  {printExpenses.toLocaleString(undefined, { minimumFractionDigits: 2 })} MZN
+                </div>
+              </div>
+              <div className="report-summary-card">
+                <div className="report-summary-label">NET BALANCE</div>
+                <div className={`report-summary-value ${printNet >= 0 ? 'report-income' : 'report-expense'}`}>
+                  {printNet >= 0 ? '+' : ''}{printNet.toLocaleString(undefined, { minimumFractionDigits: 2 })} MZN
+                </div>
+              </div>
+              <div className="report-summary-card">
+                <div className="report-summary-label">TRANSACTIONS</div>
+                <div className="report-summary-value">{printTx.length}</div>
               </div>
             </div>
-            <div className="report-summary-card">
-              <div className="report-summary-label">NET BALANCE</div>
-              <div className={`report-summary-value ${printNet >= 0 ? 'report-income' : 'report-expense'}`}>
-                {printNet >= 0 ? '+' : ''}{printNet.toLocaleString(undefined, { minimumFractionDigits: 2 })} MZN
+
+            {/* Transactions table */}
+            <div className="report-section-title">Transaction Details</div>
+            <table className="report-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Description</th>
+                  <th>Category</th>
+                  <th>Type</th>
+                  <th style={{ textAlign: 'right' }}>Amount (MZN)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {printTx.map(tx => {
+                  const catInfo = STATIC_CATEGORIES.find(c => c.id === tx.category);
+                  return (
+                    <tr key={tx.id} className={tx.type === 'income' ? 'report-row-income' : ''}>
+                      <td>{tx.date}</td>
+                      <td>{tx.description}</td>
+                      <td>{tx.type === 'income' ? 'Income' : (catInfo ? catInfo.label : 'Other')}</td>
+                      <td>
+                        <span className={`report-type-badge ${tx.type}`}>
+                          {tx.type === 'income' ? '↑ Income' : '↓ Expense'}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'right', fontWeight: 700 }}>
+                        {tx.type === 'income' ? '+' : '-'}{tx.amount.toFixed(2)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {/* Footer */}
+            <div className="report-footer">
+              <div className="report-footer-left">
+                <img src="logo.svg" alt="MiMola" className="report-footer-logo" />
+                <span>MiMola Financial Tracker</span>
               </div>
-            </div>
-            <div className="report-summary-card">
-              <div className="report-summary-label">TRANSACTIONS</div>
-              <div className="report-summary-value">{printTx.length}</div>
-            </div>
-          </div>
-
-          {/* Transactions table */}
-          <div className="report-section-title">Transaction Details</div>
-          <table className="report-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Description</th>
-                <th>Category</th>
-                <th>Type</th>
-                <th style={{ textAlign: 'right' }}>Amount (MZN)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {printTx.map(tx => {
-                const catInfo = STATIC_CATEGORIES.find(c => c.id === tx.category);
-                return (
-                  <tr key={tx.id} className={tx.type === 'income' ? 'report-row-income' : ''}>
-                    <td>{tx.date}</td>
-                    <td>{tx.description}</td>
-                    <td>{tx.type === 'income' ? 'Income' : (catInfo ? catInfo.label : 'Other')}</td>
-                    <td>
-                      <span className={`report-type-badge ${tx.type}`}>
-                        {tx.type === 'income' ? '↑ Income' : '↓ Expense'}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: 'right', fontWeight: 700 }}>
-                      {tx.type === 'income' ? '+' : '-'}{tx.amount.toFixed(2)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-
-          {/* Footer */}
-          <div className="report-footer">
-            <div className="report-footer-left">
-              <img src="logo.svg" alt="MiMola" className="report-footer-logo" />
-              <span>MiMola Financial Tracker</span>
-            </div>
-            <div className="report-footer-right">
-              Confidential • {printPeriod}
+              <div className="report-footer-right">
+                Confidential • {printPeriod}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
       {/* ════════════════ END PRINT-ONLY ═══════════════════════════════════ */}
 
       <main className="dashboard-content">

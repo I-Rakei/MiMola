@@ -542,7 +542,7 @@ body {
     print-color-adjust: exact !important;
   }
   .no-print, button, form, .alert-toast, header, .app-tabs, .tabs-bar,
-  .app-header, .modal, .card, main { display: none !important; }
+  .app-header, .modal, .card { display: none !important; }
   .print-only { display: block !important; }
 
   /* ── Report Page Container ─────────────────────── */

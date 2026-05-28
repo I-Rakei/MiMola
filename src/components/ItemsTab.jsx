@@ -241,6 +241,9 @@ function ItemProfilePage({ item, t, onBack, onAddReport }) {
   // ── Report Modal ──────────────────────────────────────────
   const [reportModalOpen, setReportModalOpen] = useState(false);
 
+  // ── Print Data (for PDF exports) ──────────────────────────
+  const [printData, setPrintData] = useState(null);
+
   // ── Filters ────────────────────────────────────────────────
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -370,39 +373,37 @@ function ItemProfilePage({ item, t, onBack, onAddReport }) {
       setReportModalOpen(false);
 
     } else if (type === 'pdf') {
+      setPrintData({
+        history: exportHistory,
+        dateFrom: rDateFrom,
+        dateTo: rDateTo
+      });
       setReportModalOpen(false);
       setTimeout(async () => {
         const fname = `${item.name.replace(/[^a-zA-Z0-9]/g, '_')}-price-history.pdf`;
+        let logged = false;
         if (window.electronAPI) {
           const res = await window.electronAPI.exportPDF(fname);
           if (res.success) {
             alert(`PDF saved: ${res.path}`);
-            if (onAddReport) {
-              onAddReport({
-                title: `Price History: ${item.name}`,
-                context: 'price_history',
-                itemName: item.name,
-                type: 'pdf',
-                dateFrom: rDateFrom || 'All Time',
-                dateTo: rDateTo || 'All Time',
-                recordCount: exportData.length
-              });
-            }
+            logged = true;
           }
         } else {
           window.print();
-          if (onAddReport) {
-            onAddReport({
-              title: `Price History: ${item.name}`,
-              context: 'price_history',
-              itemName: item.name,
-              type: 'pdf',
-              dateFrom: rDateFrom || 'All Time',
-              dateTo: rDateTo || 'All Time',
-              recordCount: exportData.length
-            });
-          }
+          logged = true;
         }
+        if (logged && onAddReport) {
+          onAddReport({
+            title: `Price History: ${item.name}`,
+            context: 'price_history',
+            itemName: item.name,
+            type: 'pdf',
+            dateFrom: rDateFrom || 'All Time',
+            dateTo: rDateTo || 'All Time',
+            recordCount: exportHistory.length
+          });
+        }
+        setTimeout(() => setPrintData(null), 1000);
       }, 300);
     }
   };
@@ -418,200 +419,207 @@ function ItemProfilePage({ item, t, onBack, onAddReport }) {
   const catInfo = STATIC_CATEGORIES.find(c => c.id === item.category);
   const hasActiveFilters = dateFrom || dateTo || sortOrder !== 'newest' || searchQuery;
 
+  const printHistory = printData ? printData.history : filteredHistory;
+  const printPeriod = printData 
+    ? `${printData.dateFrom || 'All Time'} — ${printData.dateTo || 'All Time'}`
+    : `${dateFrom || 'All Time'} — ${dateTo || 'All Time'}`;
+
   return (
-    <div className="no-print">
-      {/* Navigation bar */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <div className="d-flex align-items-center gap-3">
-          <button className="btn btn-light border shadow-sm px-3" onClick={onBack}>
-            <i className="bi bi-arrow-left me-2"></i>Back to Items
-          </button>
-          <div>
-            <h4 className="m-0 fw-bold">{item.name}</h4>
-            <div className="d-flex align-items-center gap-2 mt-1">
-              <span className="badge bg-light text-secondary border rounded-pill">
-                {catInfo ? catInfo.label : t('common.other')}
-              </span>
-              <span className="text-muted small">•</span>
-              <span className="fw-bold" style={{ color: 'var(--cf-orange)' }}>
-                Current: MZN {item.price.toFixed(2)}
-              </span>
-            </div>
-          </div>
-        </div>
-        <button className="btn btn-primary shadow-sm" onClick={() => setReportModalOpen(true)} disabled={history.length === 0}>
-          <i className="bi bi-file-earmark-bar-graph me-2"></i>Export Report
-        </button>
-      </div>
-
-      {/* Stat cards */}
-      <div className="row g-3 mb-4">
-        <div className="col-sm-6 col-lg-3">
-          <div className="card border-0 shadow-sm h-100">
-            <div className="card-body stat-card">
-              <span className="stat-label">Original Price</span>
-              <span className="stat-value">{originalPrice.toFixed(2)} MZN</span>
-              <span className="stat-subtext">First recorded price</span>
-            </div>
-          </div>
-        </div>
-        <div className="col-sm-6 col-lg-3">
-          <div className="card border-0 shadow-sm h-100">
-            <div className="card-body stat-card">
-              <span className="stat-label">Total Change</span>
-              <span className={`stat-value ${totalChange > 0 ? 'text-danger' : totalChange < 0 ? 'text-success' : ''}`}>
-                {totalChange > 0 ? '+' : ''}{totalChange.toFixed(2)} MZN
-              </span>
-              <span className="stat-subtext">Since first record</span>
-            </div>
-          </div>
-        </div>
-        <div className="col-sm-6 col-lg-3">
-          <div className="card border-0 shadow-sm h-100">
-            <div className="card-body stat-card">
-              <span className="stat-label">Avg. Change</span>
-              <span className={`stat-value ${avgChange > 0 ? 'text-danger' : avgChange < 0 ? 'text-success' : ''}`}>
-                {avgChange > 0 ? '+' : ''}{avgChange.toFixed(2)} MZN
-              </span>
-              <span className="stat-subtext">Per hike event</span>
-            </div>
-          </div>
-        </div>
-        <div className="col-sm-6 col-lg-3">
-          <div className="card border-0 shadow-sm h-100">
-            <div className="card-body stat-card">
-              <span className="stat-label">Total Hikes</span>
-              <span className="stat-value">{totalHikes}</span>
-              <span className="stat-subtext">{biggestHike > 0 ? `Biggest: +${biggestHike.toFixed(2)} MZN` : 'No hikes yet'}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters bar */}
-      <div className="card border-0 shadow-sm mb-3">
-        <div className="card-body py-3">
-          <div className="d-flex flex-wrap gap-3 align-items-end">
+    <>
+      <div className="no-print">
+        {/* Navigation bar */}
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <div className="d-flex align-items-center gap-3">
+            <button className="btn btn-light border shadow-sm px-3" onClick={onBack}>
+              <i className="bi bi-arrow-left me-2"></i>Back to Items
+            </button>
             <div>
-              <label className="form-label small fw-bold text-muted mb-1">Search</label>
-              <div className="input-group input-group-sm">
-                <span className="input-group-text bg-white"><i className="bi bi-search"></i></span>
-                <input 
-                  type="text" 
-                  className="form-control" 
-                  placeholder="Search history..." 
-                  value={searchQuery}
-                  onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-                  style={{ minWidth: '160px' }}
-                />
+              <h4 className="m-0 fw-bold">{item.name}</h4>
+              <div className="d-flex align-items-center gap-2 mt-1">
+                <span className="badge bg-light text-secondary border rounded-pill">
+                  {catInfo ? catInfo.label : t('common.other')}
+                </span>
+                <span className="text-muted small">•</span>
+                <span className="fw-bold" style={{ color: 'var(--cf-orange)' }}>
+                  Current: MZN {item.price.toFixed(2)}
+                </span>
               </div>
             </div>
-            <div>
-              <label className="form-label small fw-bold text-muted mb-1">From</label>
-              <input 
-                type="date" 
-                className="form-control form-control-sm" 
-                value={dateFrom}
-                onChange={e => { setDateFrom(e.target.value); setCurrentPage(1); }}
-              />
+          </div>
+          <button className="btn btn-primary shadow-sm" onClick={() => setReportModalOpen(true)} disabled={history.length === 0}>
+            <i className="bi bi-file-earmark-bar-graph me-2"></i>Export Report
+          </button>
+        </div>
+
+        {/* Stat cards */}
+        <div className="row g-3 mb-4">
+          <div className="col-sm-6 col-lg-3">
+            <div className="card border-0 shadow-sm h-100">
+              <div className="card-body stat-card">
+                <span className="stat-label">Original Price</span>
+                <span className="stat-value">{originalPrice.toFixed(2)} MZN</span>
+                <span className="stat-subtext">First recorded price</span>
+              </div>
             </div>
-            <div>
-              <label className="form-label small fw-bold text-muted mb-1">To</label>
-              <input 
-                type="date" 
-                className="form-control form-control-sm" 
-                value={dateTo}
-                onChange={e => { setDateTo(e.target.value); setCurrentPage(1); }}
-              />
+          </div>
+          <div className="col-sm-6 col-lg-3">
+            <div className="card border-0 shadow-sm h-100">
+              <div className="card-body stat-card">
+                <span className="stat-label">Total Change</span>
+                <span className={`stat-value ${totalChange > 0 ? 'text-danger' : totalChange < 0 ? 'text-success' : ''}`}>
+                  {totalChange > 0 ? '+' : ''}{totalChange.toFixed(2)} MZN
+                </span>
+                <span className="stat-subtext">Since first record</span>
+              </div>
             </div>
-            <div>
-              <label className="form-label small fw-bold text-muted mb-1">Sort By</label>
-              <select 
-                className="form-select form-select-sm" 
-                value={sortOrder}
-                onChange={e => { setSortOrder(e.target.value); setCurrentPage(1); }}
-                style={{ minWidth: '150px' }}
-              >
-                <option value="newest">Newest First</option>
-                <option value="oldest">Oldest First</option>
-                <option value="biggest">Biggest Change</option>
-                <option value="smallest">Smallest Change</option>
-              </select>
+          </div>
+          <div className="col-sm-6 col-lg-3">
+            <div className="card border-0 shadow-sm h-100">
+              <div className="card-body stat-card">
+                <span className="stat-label">Avg. Change</span>
+                <span className={`stat-value ${avgChange > 0 ? 'text-danger' : avgChange < 0 ? 'text-success' : ''}`}>
+                  {avgChange > 0 ? '+' : ''}{avgChange.toFixed(2)} MZN
+                </span>
+                <span className="stat-subtext">Per hike event</span>
+              </div>
             </div>
-            {hasActiveFilters && (
-              <button className="btn btn-sm btn-outline-secondary" onClick={clearFilters}>
-                <i className="bi bi-x-lg me-1"></i>Clear Filters
-              </button>
-            )}
-            <div className="ms-auto text-muted small fw-medium align-self-center">
-              {filteredHistory.length} of {history.length} records
+          </div>
+          <div className="col-sm-6 col-lg-3">
+            <div className="card border-0 shadow-sm h-100">
+              <div className="card-body stat-card">
+                <span className="stat-label">Total Hikes</span>
+                <span className="stat-value">{totalHikes}</span>
+                <span className="stat-subtext">{biggestHike > 0 ? `Biggest: +${biggestHike.toFixed(2)} MZN` : 'No hikes yet'}</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Price History Table */}
-      <div className="card border-0 shadow-sm">
-        <div className="card-header bg-white border-0 pt-3">
-          <h5 className="fw-bold m-0">
-            <i className="bi bi-graph-up-arrow me-2 text-danger"></i>
-            Price History
-          </h5>
+        {/* Filters bar */}
+        <div className="card border-0 shadow-sm mb-3">
+          <div className="card-body py-3">
+            <div className="d-flex flex-wrap gap-3 align-items-end">
+              <div>
+                <label className="form-label small fw-bold text-muted mb-1">Search</label>
+                <div className="input-group input-group-sm">
+                  <span className="input-group-text bg-white"><i className="bi bi-search"></i></span>
+                  <input 
+                    type="text" 
+                    className="form-control" 
+                    placeholder="Search history..." 
+                    value={searchQuery}
+                    onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                    style={{ minWidth: '160px' }}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="form-label small fw-bold text-muted mb-1">From</label>
+                <input 
+                  type="date" 
+                  className="form-control form-control-sm" 
+                  value={dateFrom}
+                  onChange={e => { setDateFrom(e.target.value); setCurrentPage(1); }}
+                />
+              </div>
+              <div>
+                <label className="form-label small fw-bold text-muted mb-1">To</label>
+                <input 
+                  type="date" 
+                  className="form-control form-control-sm" 
+                  value={dateTo}
+                  onChange={e => { setDateTo(e.target.value); setCurrentPage(1); }}
+                />
+              </div>
+              <div>
+                <label className="form-label small fw-bold text-muted mb-1">Sort By</label>
+                <select 
+                  className="form-select form-select-sm" 
+                  value={sortOrder}
+                  onChange={e => { setSortOrder(e.target.value); setCurrentPage(1); }}
+                  style={{ minWidth: '150px' }}
+                >
+                  <option value="newest">Newest First</option>
+                  <option value="oldest">Oldest First</option>
+                  <option value="biggest">Biggest Change</option>
+                  <option value="smallest">Smallest Change</option>
+                </select>
+              </div>
+              {hasActiveFilters && (
+                <button className="btn btn-sm btn-outline-secondary" onClick={clearFilters}>
+                  <i className="bi bi-x-lg me-1"></i>Clear Filters
+                </button>
+              )}
+              <div className="ms-auto text-muted small fw-medium align-self-center">
+                {filteredHistory.length} of {history.length} records
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="card-body p-0 overflow-auto">
-          <table className="table table-hover mb-0 align-middle">
-            <thead className="table-light">
-              <tr>
-                <th className="ps-4">Date</th>
-                <th className="text-end">Old Price</th>
-                <th className="text-end">New Price</th>
-                <th className="text-end">Change (MZN)</th>
-                <th className="text-end pe-4">Change (%)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedHistory.map((h, i) => {
-                const diff = h.newPrice - h.oldPrice;
-                const pct = h.oldPrice > 0 ? (diff / h.oldPrice * 100) : 0;
-                const isIncrease = diff > 0;
-                const isDecrease = diff < 0;
-                return (
-                  <tr key={`${h.date}-${i}`}>
-                    <td className="ps-4">
-                      <span className="fw-medium">{h.date}</span>
-                    </td>
-                    <td className="text-end text-muted">
-                      <span className="text-decoration-line-through">{h.oldPrice.toFixed(2)} MZN</span>
-                    </td>
-                    <td className="text-end fw-bold text-dark">
-                      {h.newPrice.toFixed(2)} MZN
-                    </td>
-                    <td className={`text-end fw-bold ${isIncrease ? 'text-danger' : isDecrease ? 'text-success' : ''}`}>
-                      {isIncrease ? '+' : ''}{diff.toFixed(2)} MZN
-                    </td>
-                    <td className="text-end pe-4">
-                      <span className={`badge ${isIncrease ? 'bg-danger-subtle text-danger' : isDecrease ? 'bg-success-subtle text-success' : 'bg-light text-muted'} rounded-pill px-3 py-2`}>
-                        <i className={`bi ${isIncrease ? 'bi-arrow-up-short' : isDecrease ? 'bi-arrow-down-short' : 'bi-dash'} me-1`}></i>
-                        {isIncrease ? '+' : ''}{pct.toFixed(1)}%
-                      </span>
+
+        {/* Price History Table */}
+        <div className="card border-0 shadow-sm">
+          <div className="card-header bg-white border-0 pt-3">
+            <h5 className="fw-bold m-0">
+              <i className="bi bi-graph-up-arrow me-2 text-danger"></i>
+              Price History
+            </h5>
+          </div>
+          <div className="card-body p-0 overflow-auto">
+            <table className="table table-hover mb-0 align-middle">
+              <thead className="table-light">
+                <tr>
+                  <th className="ps-4">Date</th>
+                  <th className="text-end">Old Price</th>
+                  <th className="text-end">New Price</th>
+                  <th className="text-end">Change (MZN)</th>
+                  <th className="text-end pe-4">Change (%)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedHistory.map((h, i) => {
+                  const diff = h.newPrice - h.oldPrice;
+                  const pct = h.oldPrice > 0 ? (diff / h.oldPrice * 100) : 0;
+                  const isIncrease = diff > 0;
+                  const isDecrease = diff < 0;
+                  return (
+                    <tr key={`${h.date}-${i}`}>
+                      <td className="ps-4">
+                        <span className="fw-medium">{h.date}</span>
+                      </td>
+                      <td className="text-end text-muted">
+                        <span className="text-decoration-line-through">{h.oldPrice.toFixed(2)} MZN</span>
+                      </td>
+                      <td className="text-end fw-bold text-dark">
+                        {h.newPrice.toFixed(2)} MZN
+                      </td>
+                      <td className={`text-end fw-bold ${isIncrease ? 'text-danger' : isDecrease ? 'text-success' : ''}`}>
+                        {isIncrease ? '+' : ''}{diff.toFixed(2)} MZN
+                      </td>
+                      <td className="text-end pe-4">
+                        <span className={`badge ${isIncrease ? 'bg-danger-subtle text-danger' : isDecrease ? 'bg-success-subtle text-success' : 'bg-light text-muted'} rounded-pill px-3 py-2`}>
+                          <i className={`bi ${isIncrease ? 'bi-arrow-up-short' : isDecrease ? 'bi-arrow-down-short' : 'bi-dash'} me-1`}></i>
+                          {isIncrease ? '+' : ''}{pct.toFixed(1)}%
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {filteredHistory.length === 0 && (
+                  <tr>
+                    <td colSpan="5" className="text-center text-muted py-5">
+                      <i className="bi bi-inbox display-4 d-block mb-3 opacity-50"></i>
+                      {history.length === 0 
+                        ? 'No price hikes recorded yet. Use the "Hike" button to record price changes.' 
+                        : 'No records match your current filters.'}
                     </td>
                   </tr>
-                );
-              })}
-              {filteredHistory.length === 0 && (
-                <tr>
-                  <td colSpan="5" className="text-center text-muted py-5">
-                    <i className="bi bi-inbox display-4 d-block mb-3 opacity-50"></i>
-                    {history.length === 0 
-                      ? 'No price hikes recorded yet. Use the "Hike" button to record price changes.' 
-                      : 'No records match your current filters.'}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
         </div>
-        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
       </div>
 
       {/* Print layout for PDF export — premium with logo */}
@@ -653,7 +661,7 @@ function ItemProfilePage({ item, t, onBack, onAddReport }) {
           </div>
 
           {/* Table */}
-          <div className="report-section-title">Price Change History ({filteredHistory.length} records)</div>
+          <div className="report-section-title">Price Change History ({printHistory.length} records)</div>
           <table className="report-table">
             <thead>
               <tr>
@@ -665,7 +673,7 @@ function ItemProfilePage({ item, t, onBack, onAddReport }) {
               </tr>
             </thead>
             <tbody>
-              {filteredHistory.map((h, i) => {
+              {printHistory.map((h, i) => {
                 const diff = h.newPrice - h.oldPrice;
                 const pct = h.oldPrice > 0 ? (diff / h.oldPrice * 100) : 0;
                 return (
@@ -702,6 +710,6 @@ function ItemProfilePage({ item, t, onBack, onAddReport }) {
         title={`Export: ${item.name}`}
         subtitle="Select a date range for the price history report."
       />
-    </div>
+    </>
   );
 }

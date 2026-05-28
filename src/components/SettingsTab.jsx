@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { LANGUAGES } from '../utils/i18n';
-import { LOGO_PRESETS } from '../utils/db';
 
 export default function SettingsTab({ profile, t, onSaveProfile, onResetApp }) {
   const [form, setForm] = useState({
@@ -98,21 +97,6 @@ export default function SettingsTab({ profile, t, onSaveProfile, onResetApp }) {
                       />
                     ))}
                   </div>
-                </div>
-              </div>
-
-              {/* App Logo */}
-              <div className="mb-3">
-                <label className="form-label">{t('settings.appLogoLabel')}</label>
-                <div className="d-flex gap-2">
-                  {LOGO_PRESETS.map(p => (
-                    <button key={p.id} type="button"
-                      className={`logo-preset-btn ${form.appLogo === p.id ? 'active' : ''}`}
-                      onClick={() => setForm({...form, appLogo: p.id})}>
-                      <i className={`bi ${p.icon}`}></i>
-                      <span>{p.label}</span>
-                    </button>
-                  ))}
                 </div>
               </div>
 

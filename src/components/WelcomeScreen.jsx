@@ -33,7 +33,7 @@ export default function WelcomeScreen({ appName, onComplete }) {
       <div className="welcome-screen" onClick={() => setStep(1)}>
         <div className="welcome-splash">
           <div className="welcome-logo-ring">
-            <img src="/logo.svg" alt="Logo" className="welcome-logo-img" />
+            <img src="logo.svg" alt="Logo" className="welcome-logo-img" />
           </div>
           <h1 className="welcome-app-name">{appName}</h1>
           <p className="welcome-tagline">Household spending tracker</p>
@@ -51,7 +51,7 @@ export default function WelcomeScreen({ appName, onComplete }) {
       <div className="welcome-form-container">
         <div className="welcome-form-header">
           <div className="welcome-logo-ring welcome-logo-ring--small">
-            <img src="/logo.svg" alt="Logo" className="welcome-logo-img" />
+            <img src="logo.svg" alt="Logo" className="welcome-logo-img" />
           </div>
           <h2 className="welcome-title">{t('welcome.title')}</h2>
           <p className="welcome-subtitle">{t('welcome.subtitle')}</p>

@@ -400,7 +400,7 @@ function App() {
           {/* Report header with logo */}
           <div className="report-header-premium">
             <div className="report-logo-section">
-              <img src="/logo.svg" alt="MiMola" className="report-logo-img" />
+              <img src="logo.svg" alt="MiMola" className="report-logo-img" />
             </div>
             <div className="report-header-divider"></div>
             <div className="report-meta">
@@ -473,7 +473,7 @@ function App() {
           {/* Footer */}
           <div className="report-footer">
             <div className="report-footer-left">
-              <img src="/logo.svg" alt="MiMola" className="report-footer-logo" />
+              <img src="logo.svg" alt="MiMola" className="report-footer-logo" />
               <span>MiMola Financial Tracker</span>
             </div>
             <div className="report-footer-right">
